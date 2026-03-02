@@ -109,31 +109,25 @@ fn main() {
 
     // base scale => I+P+S/16
     let base_scale = purgator_1.base_damage() / 16.0;
-    println!("base scale = {base_scale}");
 
     // base quantization => round(portion/base scale)*base scale
     let base_quantization = (purgator_1.impact / base_scale).round() * base_scale
         + (purgator_1.puncture / base_scale).round() * base_scale
         + (purgator_1.slash / base_scale).round() * base_scale;
-    println!("base quantization = {base_quantization}");
 
     // modded IPS quantization => round(portion*percentage/base scale)*base scale
     let modded_ips_quantization =
         (purgator_1.puncture * mods_collection[1].bonus / base_scale).round() * base_scale;
-    println!("modded ips quantization = {modded_ips_quantization}");
 
     // modded elemetnal quantization => round((element percentage*base damage)/base scale)*base scale
     let modded_elemental_quantization =
         (purgator_1.base_damage() * mods_collection[3].bonus / base_scale).round() * base_scale;
-    println!("modded heat quantization = {modded_elemental_quantization}");
 
     // modded damage => (quantized base + quantized IPS + quantized elements)*pure damage
     let modded_damage =
         ((base_quantization + modded_ips_quantization + modded_elemental_quantization)
             * (1.0 + mods_collection[4].bonus))
             .round();
-
-    println!("{modded_damage}");
 
     // crit multiplier quantization => round(crit multiple*(4095/32))*32/4095
     // crit damage => modded damage*(1+crit tier*(quantized crit multiplier-1))
