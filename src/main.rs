@@ -1,3 +1,6 @@
+use ordered_hash_map;
+use std::iter::zip;
+
 struct Weapon {
     impact: f32,
     puncture: f32,
@@ -115,20 +118,93 @@ fn main() {
         + (purgator_1.puncture / base_scale).round() * base_scale
         + (purgator_1.slash / base_scale).round() * base_scale;
 
-    // modded IPS quantization => round(portion*percentage/base scale)*base scale
-    let modded_ips_quantization =
-        (purgator_1.puncture * mods_collection[1].bonus / base_scale).round() * base_scale;
-
-    // modded elemetnal quantization => round((element percentage*base damage)/base scale)*base scale
-    let modded_elemental_quantization =
-        (purgator_1.base_damage() * mods_collection[3].bonus / base_scale).round() * base_scale;
-
-    // modded damage => (quantized base + quantized IPS + quantized elements)*pure damage
-    let modded_damage =
-        ((base_quantization + modded_ips_quantization + modded_elemental_quantization)
-            * (1.0 + mods_collection[4].bonus))
-            .round();
-
     // crit multiplier quantization => round(crit multiple*(4095/32))*32/4095
-    // crit damage => modded damage*(1+crit tier*(quantized crit multiplier-1))
+    let crit_multiplier_quantization =
+        (purgator_1.crit_multiplier * 4095.0 / 32.0).round() * 32.0 / 4095.0;
+
+    let mut damage_values: Vec<f32> = Vec::new();
+    let mut crit_damage_values: Vec<Vec<f32>> = Vec::new();
+    let mut equipped_mods_names: Vec<String> = Vec::new();
+
+    for grid in grids {
+        let mut grid_mods: String = String::new();
+
+        // TO DO : a struct to take in the elemental and ips mods and add each enum bonus to the proper type
+        let mut impact_damage_bonus: f32 = 0.0;
+        let mut puncture_damage_bonus: f32 = 0.0;
+        let mut slash_damage_bonus: f32 = 0.0;
+        let mut elemental_damage_bonus: f32 = 0.0;
+        let mut pure_damage_bonus: f32 = 0.0;
+
+        for equipped_mod in grid {
+            match &equipped_mod.category {
+                ModCategory::IPS(a) => match a {
+                    IPSMods::Impact => {
+                        impact_damage_bonus += equipped_mod.bonus;
+                        grid_mods += "rupture ";
+                    }
+                    IPSMods::Puncture => {
+                        puncture_damage_bonus += equipped_mod.bonus;
+                        grid_mods += "piercing_hit ";
+                    }
+                    IPSMods::Slash => {
+                        slash_damage_bonus += equipped_mod.bonus;
+                        grid_mods += "sawtooth_clip ";
+                    }
+                },
+                ModCategory::Elemental(a) => match a {
+                    ElementalMods::Heat => {
+                        elemental_damage_bonus += equipped_mod.bonus;
+                        grid_mods += "hellfire ";
+                    }
+                },
+                ModCategory::PureDamage(a) => match a {
+                    PureDamageMods::Serration => {
+                        pure_damage_bonus += equipped_mod.bonus;
+                        grid_mods += "serration ";
+                    }
+                },
+            }
+        }
+
+        equipped_mods_names.push(grid_mods);
+
+        // modded IPS quantization => round(portion*percentage/base scale)*base scale
+        let modded_ips_quantization =
+            (purgator_1.impact * impact_damage_bonus / base_scale).round() * base_scale
+                + (purgator_1.puncture * puncture_damage_bonus / base_scale).round() * base_scale
+                + (purgator_1.slash * slash_damage_bonus / base_scale).round() * base_scale;
+
+        // modded elemetnal quantization => round((element percentage*base damage)/base scale)*base scale
+        let modded_elemental_quantization =
+            (purgator_1.base_damage() * elemental_damage_bonus / base_scale).round() * base_scale;
+
+        // modded damage => (quantized base + quantized IPS + quantized elements)*pure damage
+        let modded_damage =
+            (modded_ips_quantization + modded_elemental_quantization + base_quantization)
+                * (1.0 + pure_damage_bonus);
+
+        damage_values.push(modded_damage);
+    }
+
+    for damage_value in damage_values {
+        let mut crits: Vec<f32> = Vec::with_capacity(4);
+        // crit damage => modded damage*(1+crit tier*(quantized crit multiplier-1))
+        for tier in 0..4 {
+            crits.push(
+                (damage_value * (1.0 + tier as f32 * (crit_multiplier_quantization - 1.0))).round(),
+            );
+        }
+        crit_damage_values.push(crits);
+    }
+
+    let sheet_filler: ordered_hash_map::OrderedHashMap<String, Vec<f32>> =
+        ordered_hash_map::OrderedHashMap::from_iter(zip(
+            equipped_mods_names.into_iter(),
+            crit_damage_values.into_iter(),
+        ));
+
+    for (a, b) in sheet_filler {
+        println!("{a} \n {:?}", b);
+    }
 }
