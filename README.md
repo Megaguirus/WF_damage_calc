@@ -35,9 +35,11 @@ for now, im limitting it to IPS-based hitscan weapons, your basic assault and sn
 
 # TODO!
 
-- modules
+- ~~modules~~
 - tweaks and improvements
 - dynamic calculation of certain values
+- combined elements
+- fix the math being so far off when accounting for elemental mods
 
 # what's your favorite warframe ?
 
