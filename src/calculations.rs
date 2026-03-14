@@ -22,7 +22,7 @@ pub fn fill_sheet() -> ordered_hash_map::OrderedHashMap<String, Vec<f64>> {
     }
 
     // base scale => I+P+S/16
-    let base_scale = purgator_1.base_damage() / 16.0;
+    let base_scale = purgator_1.base_damage() / 32.0;
 
     // base quantization => round(portion/base scale)*base scale
     let base_quantization = (purgator_1.impact / base_scale).round() * base_scale
